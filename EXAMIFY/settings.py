@@ -39,12 +39,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "AuthenticationSystem.apps.AuthenticationsystemConfig",
 ]
 
 ROOT_URLCONF = "EXAMIFY.urls"
 
 
-# AUTH_USER_MODEL = "AuthenticationSystem.CustomUser"
+AUTH_USER_MODEL = "AuthenticationSystem.CustomUser"
 
 
 TEMPLATES = [
