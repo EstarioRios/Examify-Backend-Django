@@ -150,6 +150,10 @@ def login(request):
 
         else:
             user, _ = user_auth
+            if not user:
+                return Response(
+                    {"msg": "your JWT isn't fine"}, status=status.HTTP_400_BAD_REQUEST
+                )
             return choose_dashboard(user, tokens=None)
 
     except AuthenticationFailed:
