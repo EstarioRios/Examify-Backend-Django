@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,7 +28,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
-    # "AuthenticationSystem.apps.AuthenticationsystemConfig",
+    "AuthenticationSystem.apps.AuthenticationsystemConfig",
+    # "Core",
 ]
 
 MIDDLEWARE = [
@@ -38,12 +40,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "AuthenticationSystem.apps.AuthenticationsystemConfig",
 ]
 
 ROOT_URLCONF = "EXAMIFY.urls"
 
 
-# AUTH_USER_MODEL = "AuthenticationSystem.CustomUser"
+AUTH_USER_MODEL = "AuthenticationSystem.CustomUser"
 
 
 TEMPLATES = [
