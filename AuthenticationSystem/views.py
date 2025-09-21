@@ -80,9 +80,27 @@ def singin(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    if user_type == "normal":
+    if user_type == "student":
         try:
-            user = CustomUser.objects.create_normal(
+            user = CustomUser.objects.create_student(
+                first_name=first_name,
+                last_name=last_name,
+                user_name=user_name,
+                password=password,
+            )
+            return Response(
+                {"user": FullCustomUserSerializer(user).data},
+                status=status.HTTP_201_CREATED,
+            )
+        except ValueError as e:
+            return Response(
+                {"msg": f"{e}"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+    if user_type == "teacher":
+        try:
+            user = CustomUser.objects.create_teacher(
                 first_name=first_name,
                 last_name=last_name,
                 user_name=user_name,

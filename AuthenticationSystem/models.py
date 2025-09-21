@@ -103,7 +103,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     user_type = models.CharField(
         choices=USER_TYPES, default="student", blank=False, null=False
     )
-    active_mode = models.BooleanField(null=False, blank=False, default=True)
+    # active_mode = models.BooleanField(null=False, blank=False, default=True)
 
     groups = models.ManyToManyField(
         Group,
