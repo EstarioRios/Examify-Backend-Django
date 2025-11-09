@@ -18,6 +18,12 @@ class Exam(models.Model):
 class Question(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, null=False, blank=False)
     question_content = models.TextField(null=False, blank=False)
+    score = models.DecimalField(
+        null=False,
+        blank=False,
+        decimal_places=2,
+        max_digits=4,
+    )
 
     # QUESTION_TYPES = [
     #     ("text", "Text Answer"),
@@ -49,3 +55,39 @@ class QOPtion(models.Model):
 
     def __str__(self):
         return self.option_content
+
+
+class ExamResult(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
+
+    start_time = models.DateTimeField(auto_now_add=True)
+    finish_time = models.DateTimeField(null=True, blank=True)
+
+    score = models.DecimalField(
+        null=False,
+        blank=False,
+        default=0,
+        decimal_places=2,
+        max_digits=4,
+    )
+
+    def __str__(self):
+        return f"{self.user} - {self.exam} - {self.score}"
+
+
+class Answer(models.Model):
+    exam_result = models.ForeignKey(
+        ExamResult, on_delete=models.CASCADE, related_name="answers"
+    )
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_option = models.ForeignKey(QOPtion, on_delete=models.CASCADE)
+
+    is_correct = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.is_correct = self.selected_option.is_correct
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.question} -> {self.selected_option}"
