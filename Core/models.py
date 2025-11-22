@@ -28,6 +28,7 @@ class Question(models.Model):
         blank=False,
         decimal_places=2,
         max_digits=4,
+        default=0.00,
     )
 
     # QUESTION_TYPES = [
