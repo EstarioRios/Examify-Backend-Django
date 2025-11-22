@@ -10,7 +10,12 @@ class Exam(models.Model):
     title = models.CharField(null=False, blank=False)
     description = models.TextField(null=False, blank=False)
     created_time = models.DateTimeField(auto_now_add=False)
-    updated_time = models.DateTimeField(auto_now=False, auto_now_add=False)
+    updated_time = models.DateTimeField(
+        auto_now=False,
+        auto_now_add=False,
+        blank=True,
+        null=True,
+    )
 
     question_many = models.IntegerField(default=0, null=False, blank=False)
 
