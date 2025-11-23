@@ -199,7 +199,7 @@ def create_question(request):
         question_content = request.data.get("question_content")
         question_score = request.data.get("question_score")
 
-        if not all([exam_id, question_content, question_content]):
+        if not all([exam_id, question_content, question_score]):
             return Response(
                 {
                     "error": "all fields (exam_id, question_content, question_score) are required"
@@ -309,7 +309,7 @@ def create_option(request):
 
     question_id = request.data.get("id")
     option_content = request.data.get("content")
-    is_correct = request.data.get("is_correct")
+    is_correct = bool(request.data.get("is_correct"))
 
     if not is_correct:
         is_correct = False
