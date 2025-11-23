@@ -287,3 +287,121 @@ def delete_question(request):
                 {"error": f"{e}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_option(request):
+    try:
+        user_auth = JWTAuthentication().authenticate(request)
+        if not user_auth:
+            return Response(
+                {"error": "your JWT isn't fine"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            user, _ = user_auth
+
+    except AuthenticationFailed:
+        return Response(
+            {"error": "your JWT isn't fine"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    question_id = request.data.get("id")
+    option_content = request.data.get("content")
+    is_correct = request.data.get("is_correct")
+
+    if not is_correct:
+        is_correct = False
+
+    if not all([question_id, option_content]):
+        return Response(
+            {"error": "all fields (id, content) are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+        if not Question.objects.filter(id=question_id).exists():
+            return Response(
+                {"error": f"question by id {question_id} not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+            exam_owner = Question.objects.get(id=question_id).exam.creator
+
+            if not exam_owner == user:
+                return Response(
+                    {"error": "you aren't allowed"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+    if QOPtion.objects.filter(
+        question=Question.objects.get(id=question_id), is_correct=True
+    ):
+        return Response(
+            {"error": "there are a correct qoption already"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    q_option = QOPtion.objects.create(
+        question=Question.objects.get(id=question_id),
+        option_content=option_content,
+        is_correct=is_correct,
+    )
+    try:
+        q_option.save()
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_option(request):
+    try:
+        user_auth = JWTAuthentication().authenticate(request)
+        if not user_auth:
+            return Response(
+                {"error": "your JWT isn't fine"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            user, _ = user_auth
+
+    except AuthenticationFailed:
+        return Response(
+            {"error": "your JWT isn't fine"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+        option_id = request.data.get("id")
+        if not option_id:
+            return Response(
+                {"error": "field id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not QOPtion.objects.filter(id=option_id).exists():
+            return Response(
+                {"error": f"qoption by id {option_id} not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+            target_qoption = QOPtion.objects.get(id=option_id)
+
+            if not user == target_qoption.question.exam.creator:
+                return Response(
+                    {"error": "you aren't allowed"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            try:
+                target_qoption.delete()
+                return Response(
+                    status=status.HTTP_200_OK,
+                )
+            except ValueError as e:
+                return Response(
+                    {"error": f"{e}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
