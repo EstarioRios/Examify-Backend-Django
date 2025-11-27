@@ -68,12 +68,12 @@ class ExamResult(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
 
     start_time = models.DateTimeField(auto_now_add=True)
-    finish_time = models.DateTimeField(null=True, blank=True)
+    # finish_time = models.DateTimeField(null=True, blank=True)
 
     score = models.DecimalField(
         null=False,
         blank=False,
-        default=0,
+        default=0.00,
         decimal_places=2,
         max_digits=4,
     )

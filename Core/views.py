@@ -8,8 +8,15 @@ from django.utils import timezone
 
 # --------------------
 
-from .models import Exam, Question, QOPtion
-from .serializers import ExamSerializer, QuestionSerializer, QOPtionSerializer
+from .models import Exam, Question, QOPtion, ExamResult, Answer
+from .serializers import (
+    ExamSerializer,
+    QuestionSerializer,
+    QOPtionSerializer,
+    AnswerSerializer,
+    ExamResultDetailSerializer,
+    # ExamResultCreateSerializer,
+)
 
 # --------------------
 
@@ -113,7 +120,9 @@ def delete_exam(request):
     try:
         target_exam.delete()
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(
+            status=status.HTTP_410_GONE,
+        )
     except ValueError as e:
         return Response(
             {"error": f"{e}"},
@@ -227,6 +236,10 @@ def create_question(request):
                 question_content=question_content,
                 score=question_score,
             )
+            exam_question_many = target_exam.question_many
+            new_exam_question_many = int(exam_question_many) + 1
+            target_exam.question_many = new_exam_question_many
+            target_exam.save()
             question.save()
             return Response(status=status.HTTP_201_CREATED)
 
@@ -279,8 +292,16 @@ def delete_question(request):
             )
 
         try:
+            exam_of_target_question = target_question.exam
+            many_question_of_exam = exam_of_target_question.question_many
+            new_many_question_of_exam = int(many_question_of_exam) - 1
+            exam_of_target_question.question_many = new_many_question_of_exam
+            exam_of_target_question.save()
+
             target_question.delete()
-            return Response(status=status.HTTP_200_OK)
+            return Response(
+                status=status.HTTP_410_GONE,
+            )
 
         except ValueError as e:
             return Response(
@@ -398,10 +419,195 @@ def delete_option(request):
             try:
                 target_qoption.delete()
                 return Response(
-                    status=status.HTTP_200_OK,
+                    status=status.HTTP_410_GONE,
                 )
             except ValueError as e:
                 return Response(
                     {"error": f"{e}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+
+@api_view(["GET"])
+def show_exam(request):
+    exam_id = request.data.get("id")
+    if not exam_id:
+        return Response(
+            {"error": "field id is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not Exam.objects.filter(id=exam_id).exists():
+        return Response(
+            {"error": f"exam by id {exam_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not Exam.objects.filter(id=exam_id, creator=user).exists():
+        return Response(
+            {"error": "you aren't alloewd"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    return Response(
+        {"exam": ExamSerializer(Exam.objects.get(id=exam_id)).data},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+def show_all_exams(request):
+
+    try:
+        return Response(
+            {"exams": ExamSerializer(Exam.objects.all(), many=True).data},
+            status=status.HTTP_200_OK,
+        )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def show_question(request):
+    question_id = request.data.get("id")
+
+    if not question_id:
+        return Response(
+            {"error": "field id is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not Question.objects.filter(id=question_id).exists():
+        return Response(
+            {"error": f"question by id {question_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(
+        {"question": QuestionSerializer(Question.objects.get(id=question_id)).data},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_exam_result(request):
+    try:
+        user_auth = JWTAuthentication().authenticate(request)
+        if not user_auth:
+            return Response(
+                {"error": "your JWT isn't fine"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user, _ = user_auth
+
+    except AuthenticationFailed:
+        return Response(
+            {"error": "your JWT isn't fine"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+        target_exam_id = request.data.get("exam_id")
+        if not target_exam_id:
+            return Response(
+                {"error": "field exam_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not Exam.objects.filter(id=target_exam_id).exists():
+            return Response(
+                {"error": f"exam by id {target_exam_id} not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+
+            started_time = timezone.now()
+            exam_result_instance = ExamResult.objects.create(
+                user=user,
+                exam=Exam.objects.get(id=target_exam_id),
+                start_time=started_time,
+            )
+        except ValueError as e:
+            return Response(
+                {"error": f"{e}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_answer(request):
+    try:
+        user_auth = JWTAuthentication().authenticate(request)
+        if not user_auth:
+            return Response(
+                {"error": "your JWT isn't fine"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user, _ = user_auth
+
+    except AuthenticationFailed:
+        return Response(
+            {"error": "yoru JWT isn't fine"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    exam_result_id = request.data.get("exam_result_id")
+    question_id = request.data.get("question_id")
+    selected_option_id = request.data.get("selected_option_id")
+    # is_correct_question = None
+
+    if not all([exam_result_id, question_id, selected_option_id]):
+        return Response(
+            {
+                "error": "all field (exam_result_id, question_id, selected_option_id) are required"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not ExamResult.objects.filter(id=exam_result_id).exists():
+        return Response(
+            {"error": f"exam_result by id {exam_result_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not Question.objects.filter(id=question_id).exists():
+        return Response(
+            {"error": f"question by id {question_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not QOPtion.objects.filter(id=selected_option_id).exists():
+        return Response(
+            {"error": f"option by id {selected_option_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        exam_result = Exam.objects.get(id=exam_result_id)
+        question = Question.objects.get(id=question_id)
+        selected_option = QOPtion.objects.get(id=selected_option_id)
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        answer_instance = Answer.objects.create(
+            exam_result=exam_result,
+            question=question,
+            selected_option=selected_option,
+            is_correct=selected_option.is_correct,
+        )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

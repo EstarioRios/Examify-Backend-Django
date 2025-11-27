@@ -106,7 +106,7 @@ class ExamResultCreateSerializer(serializers.ModelSerializer):
             "user",
             "exam",
             "start_time",
-            "finish_time",
+            # "finish_time",
             "score",
             "answers",
         ]
@@ -139,7 +139,7 @@ class ExamResultDetailSerializer(serializers.ModelSerializer):
             "user",
             "exam",
             "start_time",
-            "finish_time",
+            # "finish_time",
             "score",
             "answers",
         ]
