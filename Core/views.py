@@ -23,7 +23,7 @@ from .serializers import (
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def create_exma(request):
+def create_exam(request):
     try:
         user_auth = JWTAuthentication().authenticate(request)
         if not user_auth:
@@ -40,10 +40,10 @@ def create_exma(request):
         )
 
     exam_title = request.data.get("title")
-    exma_description = request.data.get("description")
+    exam_description = request.data.get("description")
     exam_creator = user
 
-    if not all([exam_title, exma_description, exam_creator]):
+    if not all([exam_title, exam_description, exam_creator]):
         return Response(
             {"error": "all fields (title, description, creator) are required"},
             status=status.HTTP_400_BAD_REQUEST,
@@ -64,10 +64,9 @@ def create_exma(request):
     try:
         exam = Exam.objects.create(
             title=exam_title,
-            description=exma_description,
+            description=exam_description,
             creator=exam_creator,
         )
-        exam.save(using=_db)
         return Response(status=status.HTTP_201_CREATED)
 
     except ValueError as e:
@@ -121,7 +120,7 @@ def delete_exam(request):
         target_exam.delete()
 
         return Response(
-            status=status.HTTP_410_GONE,
+            status=status.HTTP_204_NO_CONTENT,
         )
     except ValueError as e:
         return Response(
@@ -204,50 +203,49 @@ def create_question(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        exam_id = request.data.get("exam_id")
-        question_content = request.data.get("question_content")
-        question_score = request.data.get("question_score")
+    exam_id = request.data.get("exam_id")
+    question_content = request.data.get("question_content")
+    question_score = request.data.get("question_score")
 
-        if not all([exam_id, question_content, question_score]):
-            return Response(
-                {
-                    "error": "all fields (exam_id, question_content, question_score) are required"
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    if not all([exam_id, question_content, question_score]):
+        return Response(
+            {
+                "error": "all fields (exam_id, question_content, question_score) are required"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-        if not Exam.objects.filter(id=exam_id).exists():
-            return Response(
-                {"error": f"exam by id {exam_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    if not Exam.objects.filter(id=exam_id).exists():
+        return Response(
+            {"error": f"exam by id {exam_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-        target_exam = Exam.objects.get(id=exam_id)
+    target_exam = Exam.objects.get(id=exam_id)
 
-        if not target_exam.creator == user:
-            return Response(
-                {"error": "you aren't allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+    if not target_exam.creator == user:
+        return Response(
+            {"error": "you aren't allowed"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-        try:
-            question = Question.objects.create(
-                exam=target_exam,
-                question_content=question_content,
-                score=question_score,
-            )
-            exam_question_many = target_exam.question_many
-            new_exam_question_many = int(exam_question_many) + 1
-            target_exam.question_many = new_exam_question_many
-            target_exam.save()
-            question.save()
-            return Response(status=status.HTTP_201_CREATED)
+    try:
+        question = Question.objects.create(
+            exam=target_exam,
+            question_content=question_content,
+            score=question_score,
+        )
+        exam_question_many = target_exam.question_many
+        new_exam_question_many = int(exam_question_many) + 1
+        target_exam.question_many = new_exam_question_many
+        target_exam.save()
+        return Response(status=status.HTTP_201_CREATED)
 
-        except ValueError as e:
-            return Response(
-                {"error": f"{e}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["DELETE"])
@@ -275,39 +273,39 @@ def delete_question(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        if not Question.objects.filter(id=question_id).exists():
-            return Response(
-                {"error": f"question by id {question_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    if not Question.objects.filter(id=question_id).exists():
+        return Response(
+            {"error": f"question by id {question_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-        target_question = Question.objects.get(id=question_id)
-        t_q_e = target_question.exam
-        t_q_e_creator = t_q_e.creator
+    target_question = Question.objects.get(id=question_id)
+    t_q_e = target_question.exam
+    t_q_e_creator = t_q_e.creator
 
-        if not t_q_e_creator == user:
-            return Response(
-                {"error": "your aren't allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+    if not t_q_e_creator == user:
+        return Response(
+            {"error": "you aren't allowed"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-        try:
-            exam_of_target_question = target_question.exam
-            many_question_of_exam = exam_of_target_question.question_many
-            new_many_question_of_exam = int(many_question_of_exam) - 1
-            exam_of_target_question.question_many = new_many_question_of_exam
-            exam_of_target_question.save()
+    try:
+        exam_of_target_question = target_question.exam
+        many_question_of_exam = exam_of_target_question.question_many
+        new_many_question_of_exam = int(many_question_of_exam) - 1
+        exam_of_target_question.question_many = new_many_question_of_exam
+        exam_of_target_question.save()
 
-            target_question.delete()
-            return Response(
-                status=status.HTTP_410_GONE,
-            )
+        target_question.delete()
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
-        except ValueError as e:
-            return Response(
-                {"error": f"{e}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["POST"])
@@ -320,7 +318,7 @@ def create_option(request):
                 {"error": "your JWT isn't fine"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            user, _ = user_auth
+        user, _ = user_auth
 
     except AuthenticationFailed:
         return Response(
@@ -341,35 +339,38 @@ def create_option(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        if not Question.objects.filter(id=question_id).exists():
-            return Response(
-                {"error": f"question by id {question_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    if not Question.objects.filter(id=question_id).exists():
+        return Response(
+            {"error": f"question by id {question_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-            exam_owner = Question.objects.get(id=question_id).exam.creator
+    exam_owner = Question.objects.get(id=question_id).exam.creator
 
-            if not exam_owner == user:
-                return Response(
-                    {"error": "you aren't allowed"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+    if not exam_owner == user:
+        return Response(
+            {"error": "you aren't allowed"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     if QOPtion.objects.filter(
         question=Question.objects.get(id=question_id), is_correct=True
-    ):
+    ).exists():
         return Response(
             {"error": "there are a correct qoption already"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    q_option = QOPtion.objects.create(
-        question=Question.objects.get(id=question_id),
-        option_content=option_content,
-        is_correct=is_correct,
-    )
     try:
-        q_option.save()
+        q_option = QOPtion.objects.create(
+            question=Question.objects.get(id=question_id),
+            option_content=option_content,
+            is_correct=is_correct,
+        )
+
+        return Response(
+            status=status.HTTP_201_CREATED,
+        )
     except ValueError as e:
         return Response(
             {"error": f"{e}"},
@@ -387,7 +388,7 @@ def delete_option(request):
                 {"error": "your JWT isn't fine"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            user, _ = user_auth
+        user, _ = user_auth
 
     except AuthenticationFailed:
         return Response(
@@ -395,42 +396,43 @@ def delete_option(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        option_id = request.data.get("id")
-        if not option_id:
-            return Response(
-                {"error": "field id is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    option_id = request.data.get("id")
+    if not option_id:
+        return Response(
+            {"error": "field id is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-        if not QOPtion.objects.filter(id=option_id).exists():
-            return Response(
-                {"error": f"qoption by id {option_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    if not QOPtion.objects.filter(id=option_id).exists():
+        return Response(
+            {"error": f"qoption by id {option_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-            target_qoption = QOPtion.objects.get(id=option_id)
+    target_qoption = QOPtion.objects.get(id=option_id)
 
-            if not user == target_qoption.question.exam.creator:
-                return Response(
-                    {"error": "you aren't allowed"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+    if not user == target_qoption.question.exam.creator:
+        return Response(
+            {"error": "you aren't allowed"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
-            try:
-                target_qoption.delete()
-                return Response(
-                    status=status.HTTP_410_GONE,
-                )
-            except ValueError as e:
-                return Response(
-                    {"error": f"{e}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+    try:
+        target_qoption.delete()
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def show_exam(request):
-    exam_id = request.data.get("id")
+    exam_id = request.query_params.get("id")
     if not exam_id:
         return Response(
             {"error": "field id is required"},
@@ -441,12 +443,6 @@ def show_exam(request):
         return Response(
             {"error": f"exam by id {exam_id} not found"},
             status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if not Exam.objects.filter(id=exam_id, creator=user).exists():
-        return Response(
-            {"error": "you aren't alloewd"},
-            status=status.HTTP_403_FORBIDDEN,
         )
 
     return Response(
@@ -473,7 +469,7 @@ def show_all_exams(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def show_question(request):
-    question_id = request.data.get("id")
+    question_id = request.query_params.get("id")
 
     if not question_id:
         return Response(
@@ -512,32 +508,35 @@ def create_exam_result(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-        target_exam_id = request.data.get("exam_id")
-        if not target_exam_id:
-            return Response(
-                {"error": "field exam_id is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    target_exam_id = request.data.get("exam_id")
+    if not target_exam_id:
+        return Response(
+            {"error": "field exam_id is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-        if not Exam.objects.filter(id=target_exam_id).exists():
-            return Response(
-                {"error": f"exam by id {target_exam_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    if not Exam.objects.filter(id=target_exam_id).exists():
+        return Response(
+            {"error": f"exam by id {target_exam_id} not found"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
-        try:
+    try:
 
-            started_time = timezone.now()
-            exam_result_instance = ExamResult.objects.create(
-                user=user,
-                exam=Exam.objects.get(id=target_exam_id),
-                start_time=started_time,
-            )
-        except ValueError as e:
-            return Response(
-                {"error": f"{e}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        started_time = timezone.now()
+        exam_result_instance = ExamResult.objects.create(
+            user=user,
+            exam=Exam.objects.get(id=target_exam_id),
+            start_time=started_time,
+        )
+        return Response(
+            status=status.HTTP_201_CREATED,
+        )
+    except ValueError as e:
+        return Response(
+            {"error": f"{e}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["POST"])
@@ -554,7 +553,7 @@ def create_answer(request):
 
     except AuthenticationFailed:
         return Response(
-            {"error": "yoru JWT isn't fine"},
+            {"error": "your JWT isn't fine"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -590,7 +589,7 @@ def create_answer(request):
         )
 
     try:
-        exam_result = Exam.objects.get(id=exam_result_id)
+        exam_result = ExamResult.objects.get(id=exam_result_id)
         question = Question.objects.get(id=question_id)
         selected_option = QOPtion.objects.get(id=selected_option_id)
     except ValueError as e:
@@ -599,12 +598,21 @@ def create_answer(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if selected_option.question.id != question.id:
+        return Response(
+            {"error": "selected option does not belong to the question"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     try:
         answer_instance = Answer.objects.create(
             exam_result=exam_result,
             question=question,
             selected_option=selected_option,
-            is_correct=selected_option.is_correct,
+            is_correct=bool(selected_option.is_correct),
+        )
+        return Response(
+            status=status.HTTP_201_CREATED,
         )
     except ValueError as e:
         return Response(
