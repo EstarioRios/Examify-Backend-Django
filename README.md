@@ -1,4 +1,4 @@
-# 🧾 Exam System Django – Full Documentation (FINAL VERSION)
+# 🧾 Exam System Django
 
 ## 📘 Overview
 
