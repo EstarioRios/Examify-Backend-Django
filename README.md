@@ -1,48 +1,62 @@
-
-# 🧾 Exam System Django – README
+# 🧾 Exam System Django – Full Documentation (FINAL VERSION)
 
 ## 📘 Overview
 
-This backend provides **user authentication** and a complete **exam management system** through RESTful API endpoints.  
-It is built using **Django** and **Django REST Framework (DRF)** with **JWT authentication** for secure access.
+This backend provides a complete **exam management system** with **user authentication** through RESTful API endpoints.  
+Built using **Django** and **Django REST Framework (DRF)** with **JWT authentication** for secure access.
 
 The system allows users to:
 
-- Register and log in (with or without JWT tokens)
-- Create, edit, and delete exams
-- Create, edit, and delete questions and options
+- Register and log in (with or without JWT)
+- Create, edit, delete exams
+- Create, edit, delete questions and options
 - Start an exam (creates an ExamResult)
 - Submit answers for questions
 - Enforce ownership and permission checks (creator-only actions)
-- Receive clear, consistent HTTP responses and error codes
+- Receive consistent HTTP responses and error codes
+
+Base URL structure:
+
+- `/auth/` → Authentication (signup/login)
+- `/core/` → Exam system (exams, questions, options, results, answers)
 
 ---
 
 ## 🔐 Authentication Endpoints (`/auth/`)
 
+| Endpoint | Method | Auth Required | Description |
+|----------|-------|---------------|-------------|
+| `/auth/singin/` | POST | ❌ | User registration (signup) |
+| `/auth/manual-login/` | POST | ❌ | Manual login (optional JWT tokens) |
+| `/auth/login/` | POST | ✅ | Validate JWT login |
+
 ### 1️⃣ Signup – Create New User
 
-**POST** `/auth/singin/`
+**POST** `/auth/singin/`  
 
-**Body (JSON):**
+**Request Body (JSON):**
 
 ```json
 {
   "first_name": "John",
   "last_name": "Doe",
   "user_name": "john_doe",
-  "user_type": "author",
+  "user_type": "student",
   "password": "your_password"
 }
 ```
 
-**Auth:** None (AllowAny)  
-**Success Response:** `201 Created`
+**Success Response (`201 Created`):**
 
 ```json
 {
   "msg": "user created",
-  "user": { ... },
+  "user": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_name": "john_doe",
+    "user_type": "student"
+  },
   "tokens": {
     "access": "ACCESS_TOKEN",
     "refresh": "REFRESH_TOKEN"
@@ -52,16 +66,16 @@ The system allows users to:
 
 **Error Responses:**
 
-- `400 Bad Request` → Missing required fields  
-- `403 Forbidden` → Username already exists  
+- `400 Bad Request` → missing required fields  
+- `403 Forbidden` → username already exists  
 
 ---
 
 ### 2️⃣ Manual Login – Username + Password
 
-**POST** `/auth/manual-login/`
+**POST** `/auth/manual-login/`  
 
-**Body (JSON):**
+**Request Body (JSON):**
 
 ```json
 {
@@ -73,10 +87,10 @@ The system allows users to:
 
 **Behavior:**
 
-- If `remember = true` → returns **JWT tokens (access & refresh)** plus user data
-- If `remember = false` → returns user data only (no tokens)
+- If `remember=true` → returns **JWT tokens + user info**  
+- If `remember=false` → returns **user info only**  
 
-**Success Response (remember = true):**
+**Success Response (remember=true):**
 
 ```json
 {
@@ -85,18 +99,24 @@ The system allows users to:
     "access": "ACCESS_TOKEN",
     "refresh": "REFRESH_TOKEN"
   },
-  "user": { ... }
+  "user": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_name": "john_doe",
+    "user_type": "student"
+  }
 }
 ```
 
 **Error Response:**  
-`404 Not Found` → Invalid credentials  
+
+- `404 Not Found` → Invalid credentials  
 
 ---
 
-### 3️⃣ Login via JWT – Preferred Method
+### 3️⃣ JWT Login – Preferred Method
 
-**POST** `/auth/login/`
+**POST** `/auth/login/`  
 
 **Headers:**
 
@@ -104,25 +124,50 @@ The system allows users to:
 Authorization: Bearer ACCESS_TOKEN
 ```
 
-**Auth:** Token is validated manually inside the view.  
+**Behavior:**
+
+- Validates JWT token from request headers  
+- Returns user dashboard info if valid  
+
 **Success Response:**
 
 ```json
 {
   "success": "Login successful",
-  "user": { ... }
+  "user": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "user_name": "john_doe",
+    "user_type": "student"
+  }
 }
 ```
 
 **Error Response:**  
-`400 Bad Request` → Invalid or expired JWT  
+
+- `400 Bad Request` → Invalid or expired JWT  
 
 ---
 
 ## 🧾 Core Exam Endpoints (`/core/`)
 
-All endpoints under `/core/` expect JSON bodies for POST/PUT/DELETE requests and query params for GET requests (for example: `?id=123`).  
-Authorization: Unless explicitly stated otherwise, endpoints under `/core/` require a valid JWT token in the `Authorization` header.
+All endpoints under `/core/` require JSON body for POST/PUT/DELETE and query params for GET requests.  
+Authentication: JWT in `Authorization` header required for all except explicitly stated.
+
+| Section | Endpoint | Method | Auth | Description |
+|---------|----------|--------|------|-------------|
+| Exam | `/core/exam/create/` | POST | ✅ | Create new exam |
+| Exam | `/core/exam/delete/` | DELETE | ✅ | Delete exam |
+| Exam | `/core/exam/edit/` | PUT | ✅ | Edit exam |
+| Exam | `/core/exam/show/` | GET | ✅ | Show exam by id |
+| Exam | `/core/exam/all/` | GET | ✅ | List all exams |
+| Question | `/core/question/create/` | POST | ✅ | Create new question |
+| Question | `/core/question/delete/` | DELETE | ✅ | Delete question |
+| Question | `/core/question/show/` | GET | ✅ | Show question by id |
+| Option | `/core/option/create/` | POST | ✅ | Create new option |
+| Option | `/core/option/delete/` | DELETE | ✅ | Delete option |
+| ExamResult | `/core/exam-result/create/` | POST | ✅ | Start exam (create exam result) |
+| Answer | `/core/answer/create/` | POST | ✅ | Submit answer |
 
 ---
 
@@ -130,131 +175,132 @@ Authorization: Unless explicitly stated otherwise, endpoints under `/core/` requ
 
 #### 1️⃣ Create Exam
 
-**POST** `/core/exam/create/`
+**POST** `/core/exam/create/`  
 
-**Headers:**
-
-```
-Authorization: Bearer ACCESS_TOKEN
-```
-
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
   "title": "Algebra Basics",
-  "description": "A basic algebra test for beginners"
+  "description": "Basic algebra test"
 }
 ```
 
-**Behavior:**
+**Success Response (`201 Created`):**
 
-- Creates an `Exam` with the authenticated user as `creator`.
-- Only allowed for users with `user_type == "teacher"`.
+```json
+{
+  "id": 1,
+  "title": "Algebra Basics",
+  "description": "Basic algebra test",
+  "creator": "teacher_user"
+}
+```
 
-**Success Response:** `201 Created`  
-**Error Responses:**
+**Error Responses:**  
 
-- `400 Bad Request` → missing fields or duplicate title  
-- `403 Forbidden` → user is not a teacher
+- `400 Bad Request` → missing title/description  
+- `403 Forbidden` → non-teacher trying to create exam  
 
 ---
 
 #### 2️⃣ Delete Exam
 
-**DELETE** `/core/exam/delete/`
+**DELETE** `/core/exam/delete/`  
 
-**Headers:**
-
-```
-Authorization: Bearer ACCESS_TOKEN
-```
-
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
-  "id": 3
+  "id": 1
 }
 ```
 
-**Behavior:**
+**Success Response (`204 No Content`)**  
 
-- Deletes the specified exam.
-- Only the exam creator can delete their exam.
+**Error Responses:**  
 
-**Success Response:** `204 No Content`  
-**Error Responses:**
-
-- `400 Bad Request` → missing id  
 - `404 Not Found` → exam doesn't exist  
-- `403 Forbidden` → not the creator
+- `403 Forbidden` → user not creator  
 
 ---
 
 #### 3️⃣ Edit Exam
 
-**PUT** `/core/exam/edit/`
+**PUT** `/core/exam/edit/`  
 
-**Headers:**
-
-```
-Authorization: Bearer ACCESS_TOKEN
-```
-
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
-  "id": 3,
-  "new_title": "Updated Title",
+  "id": 1,
+  "new_title": "Updated Algebra",
   "new_description": "Updated description"
 }
 ```
 
-**Behavior:**
+**Success Response (`200 OK`):**
 
-- Updates title and/or description of an exam.
-- Only the creator can edit.
-
-**Success Response:** `200 OK` with serialized exam.  
-**Error Responses:** `400`, `403`, `404` as appropriate.
+```json
+{
+  "id": 1,
+  "title": "Updated Algebra",
+  "description": "Updated description",
+  "creator": "teacher_user"
+}
+```
 
 ---
 
 #### 4️⃣ Show Exam
 
-**GET** `/core/exam/show/?id=<exam_id>`
+**GET** `/core/exam/show/?id=1`  
 
-**Behavior:**
+**Success Response (`200 OK`):**
 
-- Returns the serialized `Exam` object for the provided `id`.
-
-**Success Response:** `200 OK`  
-**Error Responses:** `400`, `404`
+```json
+{
+  "id": 1,
+  "title": "Algebra Basics",
+  "description": "Basic algebra test",
+  "creator": "teacher_user"
+}
+```
 
 ---
 
 #### 5️⃣ Show All Exams
 
-**GET** `/core/exam/all/`
+**GET** `/core/exam/all/`  
 
-**Behavior:**
+**Success Response (`200 OK`):**
 
-- Returns a list of all exams (serialized).
-- Pagination is not implemented by default; consider adding if needed.
-
-**Success Response:** `200 OK`
+```json
+[
+  {
+    "id": 1,
+    "title": "Algebra Basics",
+    "description": "Basic algebra test",
+    "creator": "teacher_user"
+  },
+  {
+    "id": 2,
+    "title": "Geometry",
+    "description": "Geometry test",
+    "creator": "teacher_user"
+  }
+]
+```
 
 ---
 
 ### QUESTION Endpoints
 
-#### 1️⃣ Create Question
+#### Create Question
 
-**POST** `/core/question/create/`
+**POST** `/core/question/create/`  
 
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
@@ -264,93 +310,108 @@ Authorization: Bearer ACCESS_TOKEN
 }
 ```
 
-**Behavior:**
-
-- Adds a `Question` to the specified `Exam`.
-- Only the exam creator can add questions.
-- The `question_score` should be a numeric value (validated in the view).
-
-**Success Response:** `201 Created`
-
----
-
-#### 2️⃣ Delete Question
-
-**DELETE** `/core/question/delete/`
-
-**Body (JSON):**
+**Success Response (`201 Created`):**
 
 ```json
 {
-  "id": 10
+  "id": 1,
+  "exam_id": 1,
+  "content": "What is 2 + 2?",
+  "score": 5
 }
 ```
 
-**Behavior:** Only the exam creator can delete a question.  
-**Success Response:** `204 No Content`
+---
+
+#### Delete Question
+
+**DELETE** `/core/question/delete/`  
+
+**Request Body:**
+
+```json
+{
+  "id": 1
+}
+```
+
+**Success Response:** `204 No Content`  
 
 ---
 
-#### 3️⃣ Show Question
+#### Show Question
 
-**GET** `/core/question/show/?id=<question_id>`
+**GET** `/core/question/show/?id=1`  
 
-**Behavior:** Returns the question with its options serialized.  
-**Success Response:** `200 OK`
+**Success Response (`200 OK`):**
+
+```json
+{
+  "id": 1,
+  "exam_id": 1,
+  "content": "What is 2 + 2?",
+  "score": 5,
+  "options": [
+    {"id": 1, "content": "4", "is_correct": true},
+    {"id": 2, "content": "3", "is_correct": false}
+  ]
+}
+```
 
 ---
 
 ### OPTION Endpoints
 
-#### 1️⃣ Create Option
+#### Create Option
 
-**POST** `/core/option/create/`
+**POST** `/core/option/create/`  
 
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
-  "id": 10,                 # question id
+  "question_id": 1,
   "content": "4",
   "is_correct": true
 }
 ```
 
-**Behavior:**
-
-- Adds an option (QOPtion) to a question.
-- If `is_correct` is true, the view ensures there is no other `is_correct=True` option for that question.
-- Only the exam creator may add options.
-
-**Success Response:** `201 Created`  
-**Error Responses:** `400`, `403`, `404`
-
----
-
-#### 2️⃣ Delete Option
-
-**DELETE** `/core/option/delete/`
-
-**Body (JSON):**
+**Success Response (`201 Created`):**
 
 ```json
 {
-  "id": 22
+  "id": 1,
+  "question_id": 1,
+  "content": "4",
+  "is_correct": true
 }
 ```
 
-**Behavior:** Only the exam creator may delete options.  
-**Success Response:** `204 No Content`
+---
+
+#### Delete Option
+
+**DELETE** `/core/option/delete/`  
+
+**Request Body:**
+
+```json
+{
+  "id": 1
+}
+```
+
+**Success Response:** `204 No Content`  
 
 ---
 
 ### EXAM RESULT Endpoints
 
-#### 1️⃣ Create Exam Result (Start Exam)
+#### Create Exam Result (Start Exam)
 
-**POST** `/core/exam-result/create/`
+**POST** `/core/exam-result/create/`  
 
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
@@ -358,100 +419,80 @@ Authorization: Bearer ACCESS_TOKEN
 }
 ```
 
-**Behavior:**
+**Success Response (`201 Created`):**
 
-- Creates an `ExamResult` record with `start_time = now()` for the authenticated user.
-- Returns `201 Created` and the created ExamResult id (if implemented).
+```json
+{
+  "id": 1,
+  "exam_id": 1,
+  "student": "student_user",
+  "start_time": "2025-11-30T22:00:00Z"
+}
+```
 
 ---
 
 ### ANSWER Endpoints
 
-#### 1️⃣ Create Answer
+#### Create Answer
 
-**POST** `/core/answer/create/`
+**POST** `/core/answer/create/`  
 
-**Body (JSON):**
+**Request Body:**
 
 ```json
 {
-  "exam_result_id": 5,
-  "question_id": 10,
-  "selected_option_id": 22
+  "exam_result_id": 1,
+  "question_id": 1,
+  "selected_option_id": 1
 }
 ```
 
-**Behavior & Validation:**
+**Success Response (`201 Created`):**
 
-- Validates that `ExamResult` exists and belongs to the authenticated user.
-- Validates that `Question` and `QOPtion` exist.
-- Validates that the `selected_option` belongs to the given `question`.
-- Stores an `Answer` with `is_correct` computed from the selected option.
-
-**Success Response:** `201 Created` with answer id and correctness flag.  
-**Error Responses:** `400`, `403`, `404`
-
----
-
-## ⚙️ Authentication Rules Summary
-
-| Endpoint | Auth Required | Method | Description |
-|---------|---------------|--------|-------------|
-| `/auth/singin/` | ❌ | POST | User registration |
-| `/auth/manual-login/` | ❌ | POST | Manual login (optional tokens) |
-| `/auth/login/` | ✅ | POST | Token validation |
-| `/core/exam/create/` | ✅ | POST | Create exam |
-| `/core/exam/delete/` | ✅ | DELETE | Delete exam |
-| `/core/exam/edit/` | ✅ | PUT | Edit exam |
-| `/core/exam/show/` | ✅ | GET | Show exam |
-| `/core/exam/all/` | ✅ | GET | List all exams |
-| `/core/question/create/` | ✅ | POST | Add question |
-| `/core/question/delete/` | ✅ | DELETE | Delete question |
-| `/core/question/show/` | ✅ | GET | Show question |
-| `/core/option/create/` | ✅ | POST | Add option |
-| `/core/option/delete/` | ✅ | DELETE | Delete option |
-| `/core/exam-result/create/` | ✅ | POST | Start exam |
-| `/core/answer/create/` | ✅ | POST | Submit answer |
+```json
+{
+  "id": 1,
+  "exam_result_id": 1,
+  "question_id": 1,
+  "selected_option_id": 1,
+  "is_correct": true
+}
+```
 
 ---
 
-## 🧠 Tech Stack
+## ⚙️ Tech Stack
 
-- **Django** – Backend framework  
+- **Django** – backend framework  
 - **Django REST Framework (DRF)** – API serialization & view handling  
-- **JWT Authentication** – Secure token-based authentication via `djangorestframework-simplejwt`  
-- **SQLite / PostgreSQL** – Supported databases  
-- **Python** 3.10+
+- **JWT Authentication** – `djangorestframework-simplejwt`  
+- **SQLite / PostgreSQL** – supported databases  
+- **Python 3.10+**  
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/exam-system-backend.git
-cd exam-system-backend
+# Clone repo
+git clone https://github.com/EstarioRios/Examify-Backend-Django.git
+cd Examify-Backend-Django
 
-# 2. Create virtual environment (recommended)
+# Create virtual environment
 python -m venv .venv
+.venv\Scripts\activate  # Windows
 source .venv/bin/activate  # Linux/macOS
-.venv\Scripts\activate     # Windows
 
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Run migrations
+# Run migrations
 python manage.py migrate
 
-# 5. Start server (development)
+# Start dev server
 python manage.py runserver
 ```
-
----
-
-## 🧾 License
-
-This project is licensed under the MIT License. Feel free to modify and distribute with attribution.
 
 ---
 
