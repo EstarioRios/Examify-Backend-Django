@@ -140,7 +140,7 @@ def edit_exam(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-            user, _ = user_auth
+        user, _ = user_auth
     except AuthenticationFailed:
         return Response(
             {"error": "your JWT isn't fine"},
